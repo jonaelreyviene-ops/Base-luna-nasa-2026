@@ -48,7 +48,23 @@ solarPanels=[];for(const side of [-1,1]){const p=mesh(new THREE.BoxGeometry(3,.0
 shield=mesh(new THREE.SphereGeometry(4.8,24,16),new THREE.MeshBasicMaterial({color:0x6be3ae,wireframe:true,transparent:true,opacity:.09}),habitat,0,1,-3);
 player=new THREE.Group();world.add(player);const suit=mat(0xe9edf1,.58),dark=mat(0x27384b,.75),visor=mat(0x183d5c,.22,.55);
 mesh(new THREE.CylinderGeometry(.38,.38,1.1,12),suit,player,0,1.1,0);mesh(new THREE.SphereGeometry(.4,16,12),suit,player,0,1.88,0);const glass=mesh(new THREE.SphereGeometry(.3,16,12),visor,player,0,1.91,.32);glass.scale.set(1,.72,.38);mesh(new THREE.BoxGeometry(.56,.75,.3),dark,player,0,1.13,-.42);
-for(const side of [-1,1]){const arm=mesh(new THREE.CylinderGeometry(.13,.13,.7,8),suit,player,side*.49,1.12,0);arm.rotation.z=-side*.25;mesh(new THREE.CylinderGeometry(.16,.16,.65,8),dark,player,side*.2,.38,0)}
+// Extremidades articuladas alrededor de pivotes; las suelas quedan a ras del suelo en apoyo.
+const walkRig={legs:[],arms:[]};player.userData.walkRig=walkRig;
+function limb(parent,geometry,material,x,y,z,length){const pivot=new THREE.Group();pivot.position.set(x,y,z);parent.add(pivot);mesh(geometry,material,pivot,0,-length/2,0);return pivot}
+for(const side of [-1,1]){
+ const hip=new THREE.Group();hip.position.set(side*.2,.62,0);player.add(hip);
+ limb(hip,new THREE.CylinderGeometry(.15,.13,.48,8),suit,0,0,0,.48);
+ const knee=new THREE.Group();knee.position.set(0,-.48,0);hip.add(knee);
+ limb(knee,new THREE.CylinderGeometry(.12,.11,.43,8),dark,0,0,0,.43);
+ const boot=mesh(new THREE.BoxGeometry(.27,.16,.48),dark,knee,0,-.63,.11);
+ walkRig.legs.push({hip,knee,boot,side});
+ const shoulder=new THREE.Group();shoulder.position.set(side*.48,1.47,0);player.add(shoulder);
+ limb(shoulder,new THREE.CylinderGeometry(.13,.12,.48,8),suit,0,0,0,.48);
+ const elbow=new THREE.Group();elbow.position.set(0,-.48,0);shoulder.add(elbow);
+ limb(elbow,new THREE.CylinderGeometry(.105,.1,.39,8),suit,0,0,0,.39);
+ mesh(new THREE.SphereGeometry(.12,8,6),dark,elbow,0,-.42,.02);
+ walkRig.arms.push({shoulder,elbow,side});
+}
 player.position.set(0,0,2);
 const types=["O","E","P","W","S"];const positions=[[-11,-12],[-18,-24],[9,-16],[19,-29],[-5,-35],[26,-11],[3,-25],[-25,-13],[14,-40],[-15,-44],[29,-38],[0,-50]];
 positions.forEach((p,i)=>{const t=types[i%types.length],g=new THREE.Group();g.position.set(p[0],0,p[1]);world.add(g);const color={O:0x63d9ff,E:0xffd166,P:0x66e0a4,W:0x9beaff,S:0xe8e2d6}[t];mesh(new THREE.OctahedronGeometry(.52,0),new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.18,metalness:.18,roughness:.3}),g,0,.7,0);const ring=mesh(new THREE.TorusGeometry(.62,.035,6,22),new THREE.MeshBasicMaterial({color}),g,0,.12,0);ring.rotation.x=Math.PI/2;resources.push({group:g,type:t,active:true})});
@@ -70,7 +86,12 @@ function applyChoice(k){if(k==="life"){if(state.e<12)return say("No tienes energ
 $("overlay").style.display="none";if(state.o<=0||state.e<=0||state.p<=0||state.h<=0||state.day===7){state.done=true;showEnd();return}state.day++;state.done=false;state.bag=[];update();logState("Día "+state.day+": explora, recoge recursos y vuelve al hábitat.")}
 function showEnd(){const win=state.o>0&&state.e>0&&state.p>0&&state.h>0&&state.day===7;$("modal").innerHTML='<div class="eyebrow">INFORME FINAL</div><h2>'+(win?"¡MISIÓN COMPLETADA!":"MISIÓN INTERRUMPIDA")+'</h2><p>'+(win?"La base se mantuvo operativa durante siete días.":"Una reserva crítica llegó a cero. Revisa tus decisiones e inténtalo de nuevo.")+'</p><div class="grid"><div class="tile"><b>Oxígeno</b>'+Math.round(state.o)+'</div><div class="tile"><b>Energía</b>'+Math.round(state.e)+'</div><div class="tile"><b>Protección</b>'+Math.round(state.p)+'</div><div class="tile"><b>Investigación</b>'+state.science+' muestras/puntos</div></div><p class="small">Los valores y consumos son reglas didácticas, no telemetría ni recomendaciones operativas de NASA.</p><button class="btn" id="again">NUEVA MISIÓN</button>';$("overlay").style.display="flex";$("again").onclick=()=>{location.reload()}}
 function jump(){if(player&&player.position.y<.04){player.userData.vy=6.2}}
-function move(dt){let x=stick.x+(keys.right?1:0)-(keys.left?1:0),z=stick.y+(keys.down?1:0)-(keys.up?1:0);const len=Math.hypot(x,z);if(len>1){x/=len;z/=len}if(len>.08){const speed=state.place==="mars"?4.2:5.1;player.position.x+=x*speed*dt;player.position.z+=z*speed*dt;player.rotation.y=Math.atan2(x,z);player.userData.walk=(player.userData.walk||0)+dt*11;player.position.y=Math.max(0,Math.sin(player.userData.walk)*.035)}
+function move(dt){let x=stick.x+(keys.right?1:0)-(keys.left?1:0),z=stick.y+(keys.down?1:0)-(keys.up?1:0);const len=Math.hypot(x,z),moving=len>.08;if(len>1){x/=len;z/=len}if(moving){const speed=state.place==="mars"?4.2:5.1;player.position.x+=x*speed*dt;player.position.z+=z*speed*dt;player.rotation.y=Math.atan2(x,z)}
+player.userData.walk=(player.userData.walk||0)+(moving?dt*(state.place==="mars"?7.3:8.5):0);
+const phase=player.userData.walk,rig=player.userData.walkRig,airborne=!!player.userData.vy;
+if(rig){const amount=moving?1:0;for(const leg of rig.legs){const swing=Math.sin(phase+(leg.side===1?Math.PI:0));leg.hip.rotation.x=swing*.48*amount;leg.knee.rotation.x=Math.max(0,-swing)*.72*amount;leg.boot.rotation.x=-leg.hip.rotation.x*.35-leg.knee.rotation.x*.45}
+for(const arm of rig.arms){const swing=Math.sin(phase+(arm.side===1?0:Math.PI));arm.shoulder.rotation.x=-swing*.34*amount;arm.shoulder.rotation.z=arm.side*.07;arm.elbow.rotation.x=-.18-.16*amount}
+player.position.y=airborne?player.position.y:moving?Math.abs(Math.sin(phase*2))*.035:0;player.rotation.z=moving?Math.sin(phase)*.025:0}
 if(player.userData.vy){player.position.y+=player.userData.vy*dt;player.userData.vy-=15*dt;if(player.position.y<0){player.position.y=0;player.userData.vy=0}}
 player.position.x=THREE.MathUtils.clamp(player.position.x,-52,52);player.position.z=THREE.MathUtils.clamp(player.position.z,-65,12);
 for(const r of rocks){const dx=player.position.x-r.x,dz=player.position.z-r.z,d=Math.hypot(dx,dz);if(d<r.r&&player.position.y<.6){player.position.x+=dx/(d||1)*.08;player.position.z+=dz/(d||1)*.08}}
