@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Base Luna: Misión a pie</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f7;--card:#fff;--tx:#1b2238;--mut:#5a6480;--ln:#cfd6e6;--ox:#1f7fd1;--en:#d98a00;--pr:#2f9e5b;--bad:#c8382f;color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1426;--card:#18213b;--tx:#eef1fb;--mut:#a3adcb;--ln:#2c3858;--ox:#5cb3ff;--en:#ffb938;--pr:#58d68d;--bad:#ff7b6e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1426;--card:#18213b;--tx:#eef1fb;--mut:#a3adcb;--ln:#2c3858;--ox:#5cb3ff;--en:#ffb938;--pr:#58d68d;--bad:#ff7b6e;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:500 16px/1.4 "Baloo 2",system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:10px}
+h1{font-size:30px;line-height:1.1;margin:6px 0}h2{font-size:20px;margin:2px 0 6px}p{margin:5px 0}
+.mut{color:var(--mut);font-size:14px}.src{font-size:12px;color:var(--mut)}.bad{color:var(--bad);font-weight:700}.skillgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.skill{border:1px solid var(--ln);border-radius:10px;padding:8px;font-size:13px}.skill button{width:100%;margin-top:5px}.skill small{display:block;color:var(--mut)}
+.card{background:var(--card);border:2px solid var(--ln);border-radius:12px;padding:8px 10px;margin:8px 0}.alert{border-color:var(--en)}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.hm{font-weight:700;font-size:12px;padding:5px 6px;margin:0}
+.trk{height:9px;background:var(--ln);border-radius:5px;overflow:hidden;margin-top:2px}.fil{height:100%;transition:width .3s}
+canvas{width:100%;display:block;image-rendering:pixelated;border:3px solid var(--ln);border-radius:10px;background:#150f2e;touch-action:none;box-shadow:0 5px 18px rgba(10,8,30,.28),inset 0 0 0 1px rgba(255,255,255,.16)}
+.pad{display:flex;justify-content:space-between;gap:10px;margin:8px 0;user-select:none;-webkit-user-select:none}
+.pad button{flex:1;font:700 24px "Baloo 2",system-ui,sans-serif;padding:12px 0;border-radius:16px;border:3px solid var(--ln);background:var(--card);color:var(--tx);touch-action:none}
+.pad button:active{background:var(--ox);color:#fff}
+.go{font:700 18px "Baloo 2",system-ui,sans-serif;background:var(--ox);color:#fff;border:0;border-radius:14px;padding:10px 16px;cursor:pointer;margin:4px 4px 0 0}
+:root:not([data-theme="light"]) .go{color:#0e1426}
+button:focus-visible{outline:3px solid var(--en);outline-offset:2px}
+.menu-research{padding:6px 10px;font-size:13px;background:rgba(90,110,145,.10);border:1px solid var(--ln);border-radius:10px;margin:6px 0}.menu-research summary{cursor:pointer;font-weight:700;list-style-position:inside}.menu-research .go{font-size:14px;padding:6px 12px}
+details.card summary{cursor:pointer}
+
+.day-transition{position:relative;overflow:hidden;text-align:center;padding:24px 12px;margin:10px 0 14px;border:2px solid #65c9ff;border-radius:16px;background:linear-gradient(135deg,#101b38,#24345a 55%,#111a30);color:#eaf8ff;animation:dayIn .85s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 0 24px #47baff35}
+.day-transition:before{content:"";position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 42%,#ffffff18 50%,transparent 58%);animation:daySweep 2.4s ease-in-out infinite}
+.day-transition .day-kicker{font-size:12px;letter-spacing:4px;color:#91dfff}
+.day-transition .day-number{font-size:clamp(34px,9vw,52px);font-weight:700;line-height:1.1;text-shadow:0 0 16px #58caff88}
+.day-transition .day-sub{font-size:14px;color:#c4eaff;margin-top:8px}
+@keyframes dayIn{from{opacity:0;transform:translateY(-18px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes daySweep{0%,100%{transform:translateX(-55%)}50%{transform:translateX(55%)}}
+</style></head><body><main id="app"></main>
+<script>
+var STORMS=[
+{f:"4 sep 2017",n:"llamarada solar clase M5.5",s:1},{f:"11 may 2024",n:"llamarada solar clase X5.8",s:2},
+{f:"14 may 2024",n:"llamarada solar clase X8.7",s:2},{f:"3 oct 2024",n:"llamarada solar clase X9.0",s:2},
+{f:"6 sep 2017",n:"llamarada solar clase X9.3",s:2},{f:"23 jul 2012",n:"eyección de masa coronal gigante (más de 2 000 km/s)",s:3}];
+var FACTS=[
+"En el espacio los huesos pierden densidad: los astronautas pueden perder cerca de 1% al mes. Por eso hacen ejercicio todos los días. (OSDR)",
+"Sin gravedad, los músculos trabajan menos y se debilitan. Los astronautas usan máquinas de resistencia para evitarlo. (OSDR)",
+"En la Estación Espacial Internacional la radiación es mucho mayor que en la Tierra, porque no hay tanta atmósfera que nos proteja. (Dosimetría de astronautas, OSDR)",
+"Una noche en la Luna dura unos 14 días terrestres y la temperatura baja a cerca de -170 °C. Hay que guardar energía. (Artemis y LRO)",
+"Las llamaradas solares se clasifican como A, B, C, M y X. Cada letra es 10 veces más fuerte que la anterior. (DONKI)",
+"Las tormentas solares pueden dañar la electrónica. Por eso los planificadores revisan DONKI antes de misiones y caminatas espaciales.",
+"Los mensajes Tierra-Luna tardan algo más de 1 segundo. A Marte tardan entre 3 y 22 minutos, así que la base debe decidir sola.",
+"Los científicos encontraron hielo de agua en cráteres siempre en sombra de la Luna (misión LCROSS, 2009). Esa agua podría servir para beber y para regar plantas. (NASA)",
+"En la Estación Espacial los astronautas han cultivado lechuga y chiles y se los han comido (experimentos Veggie y Plant Habitat). Las plantas dan comida, un poco de oxígeno y ánimo.",
+"El suelo de Marte tiene sales llamadas percloratos que son tóxicas para las plantas. Por eso allá se cultivaría en invernaderos con tierra lavada. (Misión Phoenix)"];
+var W=720,GY=140,DAY=32,TY={O:["#4aa3e8","Oxígeno"],E:["#ffcf3f","Energía"],P:["#58d68d","Escudo"],H:["#3fa05a","Cosecha"],S:["#e6e1d4","Ciencia"],A:["#7fd4ff","Agua"]};
+var g,keys={l:0,r:0},app=document.getElementById("app"),$=function(i){return document.getElementById(i)},ctx,AC,mute=false,last=0,hT=0,ST=[],CR=[],pt=[],pops=[];
+function cl(v){return Math.max(0,Math.min(100,v))}
+function snd(f,d,ty,v){if(mute)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),a=AC.createGain();o.type=ty||"square";o.frequency.value=f;a.gain.setValueAtTime(v||.05,AC.currentTime);a.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(a);a.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+function scale(s){var L=s.n.indexOf("clase X")>-1?"X":s.n.indexOf("clase M")>-1?"M":"";return '<span class="scl">'+["A","B","C","M","X"].map(function(l){return '<span class="'+(l==L?"hi":"")+'">'+l+'</span>'}).join("")+'</span>'}
+function med(){var h=g.h,t=h>75?"El equipo se siente bien. El escudo y la comida están funcionando.":h>50?"Cansancio y huesos más débiles. En el espacio los huesos y músculos se debilitan (OSDR).":h>25?"Náuseas y mareo. La radiación puede dañar el ADN de las células.":"¡Peligro! Mucha radiación y debilidad.";return t+(g.fl?" Vieron destellos de luz aunque cerraran los ojos: los astronautas de Apolo contaron lo mismo. Eran rayos cósmicos cruzando el ojo.":"")}
+function hud(){var r=[["O₂","o","--ox"],["Energía","e","--en"],["Escudo","p","--pr"],["Salud","h","--bad"]];
+ $("hud").innerHTML=r.map(function(x){var v=Math.round(g[x[1]]);return '<div class="card hm">'+x[0]+' '+v+'<div class="trk" role="progressbar" aria-valuenow="'+v+'" aria-valuemin="0" aria-valuemax="100"><div class="fil" style="width:'+v+'%;background:var('+x[2]+')"></div></div></div>'}).join("")}
+function intro(){app.innerHTML='<h1>Base Luna: misión a pie</h1><button class="go" onclick="toggleMusic()">🎵 Música: <span id="musicLabel">OFF</span></button><p class="mut">Banda sonora ambiental original, generada por el navegador.</p><p>Eres un astronauta explorando la Luna durante 7 días. Camina, recoge recursos y vuelve a la base antes de que se acabe el tiempo. El terreno se genera sin fin hacia la izquierda y la derecha: puedes explorar más allá del horizonte y regresar.</p><p class="mut">🎁 Recompensa pasiva: recibes 1 punto de habilidad por cada día natural que visites el juego. Se guarda aunque cierres la página. También puedes ganar puntos de investigación llevando muestras científicas (S) a la base.</p><div class="card"><p><b>O₂:</b> aire para respirar. <b>Energía:</b> la electricidad. <b>Escudo:</b> protege de la <b>radiación</b>, una energía invisible del Sol que enferma a los astronautas. <b>Salud:</b> tu cuerpo.</p><p>Tu mochila comienza con <b>3 espacios</b>; puedes ampliarla hasta <b>8</b> con una mejora independiente del árbol de habilidades. El mapa es infinito en ambos sentidos y cada zona genera terreno, obstáculos y recursos nuevos. Lo que está más lejos vale más, pero afuera recibes más radiación y el tiempo corre. Algunas jornadas pueden terminar con una <b>lluvia de meteoritos</b>: busca refugio en la base. En el resumen diario instala paneles solares para generar energía y construye módulos para ampliar el refugio.</p><p><b>Obstáculos:</b> salta ⬆ rocas y cráteres (la gravedad cambia según el entorno: en la Luna es menor (1.62 m/s²) y en Marte mayor (3.71 m/s²), así que el salto y el tiempo en el aire son distintos.). Las colisiones usan cajas separadas para el cuerpo, rocas y bordes de cráter: si se superponen, pierdes salud y 2 segundos. <b>Cultivos:</b> frente a la base pulsa <b>Q</b> para sembrar 🌱, regar 💧 con el hielo de agua que traigas y cosecha 🍅 cuando madure. Si no la cosechas al día siguiente, se echa a perder.</p></div><p><b>Elige tu destino:</b></p><button class="go" onclick="start(false)">🌙 Luna</button><button class="go" onclick="start(true)">🔴 Marte (aviso tarde, poco sol)</button><details class="card"><summary><b>La ciencia real de este juego</b></summary><p><b>DONKI</b> (clima espacial de la NASA): las fechas y clases de las tormentas solares son eventos reales.</p><p><b>OSDR</b> (datos biológicos de la NASA): los datos curiosos sobre huesos, músculos y radiación en astronautas.</p><p><b>Artemis, Chang’e 4 y Curiosity</b>: la noche lunar y la radiación en la Luna y en Marte. En Marte llega cerca de 43% de la luz solar de la Tierra, por eso la energía vale menos.</p><p><b>Honestidad:</b> en la vida real, con escudos, una tormenta no enferma a los astronautas al instante: el riesgo grande se acumula con meses y años (más riesgo de cáncer y cataratas). El juego lo acelera para que se vea. Los eventos históricos de ejemplo están guardados dentro del juego; el panel de datos NASA permite consultar DONKI en vivo cuando hay conexión. Las barras y la dosis son una simplificación.</p></details><details class="card"><summary><b>Para familias y escuelas</b></summary><p>Preguntas: ¿qué recogiste primero y por qué? ¿Qué pasó cuando te quedaste lejos de la base en una tormenta? ¿Por qué la NASA mira el clima espacial antes de una caminata? Jueguen en Marte y comparen.</p></details><div class="card"><b>Recursos científicos NASA y agencias asociadas</b><p class="src">DONKI: <a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/" target="_blank" rel="noopener">clima espacial</a> · OSDR: <a href="https://osdr.nasa.gov/bio/repo/" target="_blank" rel="noopener">biología espacial</a> · RadLab: <a href="https://visualization.osdr.nasa.gov/radlab/gui/data-api/" target="_blank" rel="noopener">dosimetría</a> · Mars Trek: <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">terreno marciano</a> · <a href="https://api.nasa.gov/" target="_blank" rel="noopener">NASA Open APIs</a>.</p><p class="src">CSA: <a href="https://www.asc-csa.gc.ca/eng/youth-educators/resources-stem-and-youth-organizations.asp" target="_blank" rel="noopener">recursos STEM</a> · <a href="https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/" target="_blank" rel="noopener">producción de alimentos</a>. Los eventos del juego son históricos y están guardados; no son datos en vivo.</p></div><p class="src">Gravedad aproximada: Luna 1.62 m/s²; Marte 3.71 m/s². La física está escalada para el juego.</p>'}
+var DAILY_KEY="baseLuna_dailyPoints_v1";
+function claimDailyPoint(){var data={date:"",bank:0};try{data=JSON.parse(localStorage.getItem(DAILY_KEY)||"{}")}catch(e){}if(!data||typeof data!=="object")data={};data.bank=Math.max(0,Math.floor(Number(data.bank)||0));var now=new Date(),today=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0"),earned=false;if(data.date!==today){data.bank++;data.date=today;earned=true;try{localStorage.setItem(DAILY_KEY,JSON.stringify(data))}catch(e){}}return {bank:data.bank,earned:earned}}
+function start(m){if(m===undefined)m=g?g.mars:false;var daily=claimDailyPoint();var ds=[2,3,4,5,6,7].sort(function(){return Math.random()-.5}).slice(0,3),st={},pool=STORMS.slice().sort(function(){return Math.random()-.5});
+ ds.forEach(function(d,i){st[d]=pool[i]});g={day:1,o:60,e:60,p:60,h:100,sci:0,skillPts:daily.bank,skills:{speed:0,jump:0,warning:0,radiation:0},capacity:3,storageLevel:0,solarLevel:0,shelterLevel:0,st:st,mars:!!m,gravity:m?3.71:1.62,dose:0,dz:0,fl:false,agua:1,pl:[{x:30,s:0,w:0},{x:50,s:0,w:0},{x:70,s:0,w:0}]};
+ app.innerHTML='<div id="top" class="mut"></div><button class="go" onclick="toggleMusic()">🎵 Música: <span id="musicLabel">OFF</span></button><details class="menu-research"><summary>☰ Menú · Investigación: <b id="researchPoints">0</b> pts</summary><p>Los puntos de investigación se obtienen al entregar muestras científicas y completar la recompensa diaria. Se usan para mejorar el equipo y la base.</p><p class="mut">Controles: ←/A y →/D mover · Espacio/↑ saltar · Q sembrar/regar/cosechar · G reiniciar misión · Enter siguiente día.</p><button class="go" onclick="start(g.mars)">↻ Reiniciar misión (G)</button></details><div class="hud" id="hud"></div><div id="al" class="mut"></div><canvas id="cv" width="960" height="704" aria-label="Juego HD 4x: explora un mundo infinito en ambos sentidos"></canvas><div class="pad"><button id="bl" aria-label="Izquierda">◀</button><button id="br" aria-label="Derecha">▶</button><button id="bj" aria-label="Saltar">⬆</button><button id="bx" aria-label="Acción Q">Q · 🌱</button></div><div id="ctl"></div>';
+ ctx=$("cv").getContext("2d");ctx.setTransform(4,0,0,4,0,0);ST=[];for(var i=0;i<60;i++)ST.push({x:Math.random()*240,y:Math.random()*100,c:Math.random()<.2?"#ffb38a":"#fff"});CR=[];for(i=0;i<9;i++)CR.push({x:80+i*80+Math.random()*30,w:14+Math.random()*16});
+ [["bl","l"],["br","r"]].forEach(function(p){var b=$(p[0]);b.addEventListener("pointerdown",function(e){e.preventDefault();keys[p[1]]=1;snd(200,.05)});["pointerup","pointerleave","pointercancel"].forEach(function(ev){b.addEventListener(ev,function(){keys[p[1]]=0})})});$("bj").addEventListener("pointerdown",function(e){e.preventDefault();jump()});$("bx").addEventListener("pointerdown",function(e){e.preventDefault();act()});
+ newDay();if(daily.earned){$("al").innerHTML='<div class="card">🎁 ¡Punto de investigación diario conseguido! +1 punto. Saldo diario guardado: '+daily.bank+'.</div>'+$("al").innerHTML}}
+function newDay(){var d=g.day,ty=["O","E","P","A","S"],al="";if(g.day>1&&g.solarLevel){var gain=g.solarLevel*(g.mars?4:8);g.e=cl(g.e+gain);g.lastSolar=gain}else{g.lastSolar=0}g.t=DAY+(g.st[d]?g.skills.warning*4:0);g.ph="play";g.cinema=(g.day===1?10.5:0);g.cinemaTotal=10.5;g.px=60;g.f=1;g.wk=0;g.carry=[];g.dz=0;g.expo=0;g.dep=[];g.items=[];g.ob=[];g.py=0;g.vy=0;g.hit=0;g.fl=false;g.meteorDay=Math.random()<.24;g.mets=[];pt=[];pops=[];
+ // Mundo procedural infinito: cada tramo se genera una sola vez y se conserva al regresar.
+ g.ob=[];g.items=[];g.generated={};g.chunkSize=360;
+ for(var cx=-1;cx<=2;cx++)generateChunk(cx);
+ (g.mars?[d]:[d,d+1]).forEach(function(x){var s=g.st[x];if(s){al+='<div class="card alert">⚠️ <b>Alerta de DONKI'+(g.mars?' (llegó tarde: en Marte los mensajes tardan de 3 a 22 minutos)':'')+':</b> '+(x==d?'hoy, al acabar el tiempo,':'mañana')+' llega una '+s.n+' (evento real del '+s.f+'). '+scale(s)+' Los rayos caen fuera de la base: ¡vuelve antes!</div>'}});
+ if(g.meteorDay)al+='<div class="card alert">☄️ <b>Pronóstico:</b> hay posibilidad de lluvia de meteoritos al terminar la jornada. Si ocurre, vuelve a la base para refugiarte.</div>';$("al").innerHTML=al;$("ctl").innerHTML="";tp();hud();last=performance.now();if(!newDay.on){newDay.on=1;requestAnimationFrame(loop)}}
+function chunkRand(seed){var x=Math.sin(seed*127.1+g.day*311.7+(g.mars?91:17))*43758.5453;return x-Math.floor(x)}
+function generateChunk(cx){
+ if(g.generated[cx])return;g.generated[cx]=1;
+ var left=cx*g.chunkSize,right=left+g.chunkSize,seed=(cx+100000)*19+g.day*37;
+ var safe=right>0&&left<112;
+ for(var i=0;i<5;i++){
+  var r=chunkRand(seed+i*7),x=left+28+r*(g.chunkSize-56);
+  if(safe&&x<125)continue;
+  var cr=chunkRand(seed+i*13+5)<.34,w=cr?18+chunkRand(seed+i*17)*10:9+chunkRand(seed+i*19)*5;
+  g.ob.push({x:x,c:cr,w:w,chunk:cx});
+ }
+ var types=["O","E","P","A","S"];
+ for(i=0;i<7;i++){
+  var rr=chunkRand(seed+300+i*11),x2=left+35+rr*(g.chunkSize-70);
+  if(safe&&x2<130)continue;
+  if(g.ob.some(function(o){return o.chunk===cx&&Math.abs(o.x-x2)<o.w/2+24}))x2=Math.min(right-18,x2+34);
+  var type=types[Math.floor(chunkRand(seed+500+i*23)*types.length)];
+  var value=Math.round(8+chunkRand(seed+700+i*31)*20);
+  if(type=="E"&&g.mars)value=Math.round(value*.6);
+  if(type=="A")value=chunkRand(seed+900+i*5)>.55?2:1;
+  g.items.push({t:type,x:x2,v:value,ok:1,chunk:cx});
+ }
+}
+function ensureWorld(){
+ var center=Math.floor(g.px/g.chunkSize);
+ for(var c=center-2;c<=center+2;c++)generateChunk(c);
+}
+function dep(){g.carry.forEach(function(it){var k={O:"o",E:"e",P:"p",A:"agua",S:"sci"}[it.t];g[k]=(k=="sci"||k=="agua")?g[k]+it.v:cl(g[k]+it.v);if(it.t=="S")g.skillPts+=Math.max(1,Math.floor(it.v/5));g.dep.push(TY[it.t][1]+" +"+it.v);pops.push({x:60,y:GY-40,t:"+"+it.v,c:TY[it.t][0],l:1})});g.carry=[];snd(660,.15,"triangle");hud();tp()}
+function loop(now){requestAnimationFrame(loop);var dt=Math.min((now-last)/1000,.05);last=now;if(!g||!ctx)return;upd(dt);draw();hT+=dt;if(hT>.25){hT=0;if(g.ph!="sum"){hud();lab()}}}
+function boxHit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+// Hitbox anatómica compuesta: casco, torso y piernas. Excluye mochila y adornos.
+function playerBoxes(){var top=GY-g.py-24;return [{x:g.px-4,y:top+1,w:8,h:7},{x:g.px-5,y:top+8,w:10,h:8},{x:g.px-4,y:top+16,w:8,h:7}]}
+function playerBox(){return {x:g.px-4,y:GY-g.py-23,w:8,h:22}}
+function playerHits(ob){return playerBoxes().some(function(b){return boxHit(b,ob)})}
+function upd(dt){if(g.ph=="sum")return;if(g.cinema>0){g.cinema=Math.max(0,g.cinema-dt);return}var m=keys.r-keys.l,spd=60*(1+g.skills.speed*.12);g.px+=m*spd*dt;ensureWorld();if(m){g.f=m;g.wk+=dt*10}
+ var out=(g.px>100||g.px<18),s=g.st[g.day],grav=g.mars?300:180;if(g.py>0||g.vy>0){g.vy-=grav*dt;g.py=Math.max(0,g.py+g.vy*dt);if(g.py==0)g.vy=0}if(g.hit>0)g.hit-=dt;else g.ob.forEach(function(o){var ob=o.c?{x:o.x-o.w/2+2,y:GY-3,w:o.w-4,h:3}:{x:o.x-4,y:GY-8,w:8,h:8};if(playerHits(ob)){g.hit=.65;g.h=cl(g.h-(o.c?4:3));if(g.ph=="play")g.t=Math.max(0,g.t-2);var obstacleCenter=o.x;var pushDir=g.px<obstacleCenter?-1:1;g.px+=pushDir*18;g.px=Math.max(-g.chunkSize*100,Math.min(g.chunkSize*100,g.px));snd(120,.2,"sawtooth",.07);pops.push({x:g.px,y:GY-34,t:o.c?"¡Borde del cráter!":"¡Roca!",c:"#ff8a7a",l:1})}});
+ pops.forEach(function(p){p.y-=18*dt;p.l-=dt});pops=pops.filter(function(p){return p.l>0});
+ if(g.ph=="play"){g.t-=dt;if(out){g.dz+=(g.mars?.7:1.4)*(2-g.p/100)*dt/DAY;g.h=cl(g.h-.12*(2-g.p/100)*dt*(g.mars?.5:1)*(1-g.skills.radiation*.15))}
+  g.items.forEach(function(it){if(it.ok&&boxHit(playerBox(),{x:it.x-4,y:GY-17,w:8,h:13})){if(g.carry.length<g.capacity){it.ok=0;g.carry.push(it);snd(880,.1,"square");pops.push({x:it.x,y:GY-26,t:TY[it.t][1],c:TY[it.t][0],l:1})}else if(!g.fullT||now0()-g.fullT>1500){g.fullT=now0();pops.push({x:g.px,y:GY-34,t:"¡Mochila llena!",c:"#ff8a7a",l:1.2})}}});
+  if(!out&&g.carry.length)dep();
+  if(g.t<=0){if(s){g.ph="storm";g.stT=6;snd(150,.6,"sawtooth",.08)}else if(g.meteorDay){g.ph="meteor";g.metT=6;g.mets=[];snd(240,.5,"sawtooth",.06)}else endDay()}}
+ else if(g.ph=="storm"){g.stT-=dt;for(var i=0;i<3;i++)pt.push({x:g.px-120+Math.random()*240+(Math.random()-.5)*200,y:-4});
+  if(out){g.expo+=dt;g.h=cl(g.h-s.s*4*(1.1-g.p/100)*dt*(1-g.skills.radiation*.15));g.dz+=s.s*1.2*(1.1-g.p/100)*dt*(1-g.skills.radiation*.15);if(g.expo>1.5)g.fl=true}
+  if(g.stT<=0){g.p=cl(g.p-10*s.s);g.e=cl(g.e-5*s.s);if(g.meteorDay){g.ph="meteor";g.metT=6;g.mets=[]}else endDay()}}
+ else if(g.ph=="meteor"){g.metT-=dt;if(out)g.expo+=dt;g.mets.push({x:g.px+(Math.random()-.5)*110,y:-8,v:125+Math.random()*75,hit:0});g.mets.forEach(function(a){a.y+=a.v*dt;if(!a.hit&&a.y>=GY-5&&Math.abs(a.x-g.px)<11&&out){a.hit=1;g.h=cl(g.h-9);g.p=cl(g.p-3);pops.push({x:g.px,y:GY-30,t:"¡Impacto! -9 salud",c:"#ff8a7a",l:1.3});snd(95,.18,"sawtooth",.08)}});g.mets=g.mets.filter(function(a){return !a.hit&&a.y<GY+8});if(g.metT<=0)endDay()}
+ pt.forEach(function(q){q.y+=130*dt;if(Math.abs(q.x-60)<=42&&q.y>GY-Math.sqrt(Math.max(0,1764-(q.x-60)*(q.x-60)))&&q.x>=18&&q.x<=102){q.d=1}});pt=pt.filter(function(q){return !q.d&&q.y<GY+6})}
+function now0(){return performance.now()}
+function tp(){$("top").textContent=(g.mars?"Marte":"Luna")+" · Día "+g.day+" de 7 · 🎒 "+g.carry.length+"/"+g.capacity+" · 📍 "+(g.px<60?"← ":"→ ")+Math.abs(Math.round(g.px-60))+" m · ☀️"+g.solarLevel+" · 🏠"+g.shelterLevel+" · 💧"+g.agua+" · Investigación: "+g.skillPts+" pts";var rp=$("researchPoints");if(rp)rp.textContent=g.skillPts}
+function np(){for(var i=0;i<3;i++)if(Math.abs(g.px-g.pl[i].x)<8)return g.pl[i];return null}
+function jump(){if(g&&g.ph!="sum"&&g.py<=0){g.vy=(g.mars?145:118)*(1+g.skills.jump*.10);snd(400,.15,"sine")}}
+function lab(){var p=np(),b=$("bx");if(b)b.textContent=!p?"Q · 🌱":p.s==0?"Q · 🌱 Sembrar":p.s<3?(p.w?"💧 ✓":"💧 Regar"):p.s==3?"🍅 Cosechar":"🧹 Limpiar"}
+function act(){if(!g||g.ph=="sum"||g.cinema>0)return;var p=np(),m=function(t,c){pops.push({x:g.px,y:GY-34,t:t,c:c||"#fff",l:1.2})};if(!p)return m("Acércate a un cultivo","#ffd23f");
+ if(p.s==0){if(g.e<6)return m("Falta energía","#ff8a7a");g.e=cl(g.e-6);p.s=1;p.w=0;m("Sembrada","#58d68d")}
+ else if(p.s<3){if(p.w)m("Ya la regaste hoy");else if(g.agua<1)m("Sin agua: busca hielo","#7fd4ff");else{g.agua--;p.w=1;m("Regada","#7fd4ff")}}
+ else if(p.s==3){p.s=0;g.h=cl(g.h+14);g.o=cl(g.o+6);m("+14 salud","#ff8a7a")}
+ else{p.s=0;m("Limpio")}
+ snd(500,.1,"triangle");hud();tp();lab()}
+function skillTree(){var defs=[["speed","Velocidad","+12% de velocidad por nivel"],["jump","Salto","+10% de impulso por nivel"],["warning","Alerta temprana","+4 s de preparación antes de una tormenta por nivel"],["radiation","Resistencia a radiación","−15% de daño y dosis por nivel (máximo −45%)"]];return '<div class="card"><h2>🌳 Árbol de habilidades</h2><p>Tienes <b>'+g.skillPts+' puntos de investigación</b>. Se obtienen con la recompensa diaria y al entregar muestras científicas (S). Cada mejora cuesta 3 + 3 por nivel; máximo nivel 3.</p><div class="skillgrid">'+defs.map(function(d){var lv=g.skills[d[0]],cost=3+lv*3;return '<div class="skill"><b>'+d[1]+'</b><small>'+d[2]+'</small><small>Nivel '+lv+'/3 · coste '+(lv>=3?"—":cost)+'</small><button class="go" '+(lv>=3||g.skillPts<cost?'disabled':'')+' onclick="upgradeSkill(\''+d[0]+'\')">'+(lv>=3?'Máximo':'Mejorar')+'</button></div>'}).join("")+'</div></div>'}
+function storageUpgrade(){var cost=[5,8,11,14,17][g.storageLevel]||0;return '<div class="card"><h2>🎒 Ampliación de mochila</h2><p>Mejora externa al árbol: aumenta tu capacidad de carga de '+g.capacity+' a '+(g.capacity<8?g.capacity+1:8)+' espacios. Máximo: 8. Tienes '+g.skillPts+' puntos de habilidad.</p><button class="go" '+(g.capacity>=8||g.skillPts<cost?'disabled':'')+' onclick="upgradeStorage()">'+(g.capacity>=8?'Capacidad máxima':('Ampliar · '+cost+' puntos'))+'</button></div>'}
+function scienceExchange(){return '<div class="card"><h2>⚡ Investigación de emergencia</h2><p>Convierte energía de la base en investigación: entrega <b>15 de energía</b> para obtener <b>1 punto de investigación</b>.</p><p>Energía disponible: '+Math.floor(g.e)+'</p><button class="go" '+(g.e<15?'disabled':'')+' onclick="convertEnergyToScience()">Cambiar 15 energía por 1 punto</button></div>'}
+function baseDevelopment(){
+ var sc=[6,10,15][g.solarLevel]||0,bc=[7,12,18][g.shelterLevel]||0;
+ return '<div class="card"><h2>☀️ Central eléctrica solar</h2><p>Nivel '+g.solarLevel+'/3. Los paneles producen energía automáticamente al comenzar cada jornada: '+(g.mars?4:8)+' unidades por nivel (en Marte producen menos por la menor luz solar). La producción se suma al inicio del siguiente día.</p><p>Saldo: '+g.skillPts+' puntos de habilidad.</p><button class="go" '+(g.solarLevel>=3||g.skillPts<sc?'disabled':'')+' onclick="upgradeSolar()">'+(g.solarLevel>=3?'Nivel máximo':'Instalar panel · '+sc+' puntos')+'</button></div>'+
+ '<div class="card"><h2>🏠 Ampliar el refugio</h2><p>Nivel '+g.shelterLevel+'/3. Cada ampliación extiende la zona segura 18 m y añade módulos habitables al exterior de la base.</p><p>La zona segura actual llega hasta '+(100+g.shelterLevel*18)+' m desde el origen.</p><button class="go" '+(g.shelterLevel>=3||g.skillPts<bc?'disabled':'')+' onclick="expandShelter()">'+(g.shelterLevel>=3?'Refugio máximo':'Construir módulo · '+bc+' puntos')+'</button></div>';
+}
+function upgradeSolar(){if(!g||g.ph!=="sum"||g.solarLevel>=3)return;var c=[6,10,15][g.solarLevel];if(g.skillPts<c)return;g.skillPts-=c;g.solarLevel++;refreshUpgrades();snd(740,.16,"triangle")}
+function expandShelter(){if(!g||g.ph!=="sum"||g.shelterLevel>=3)return;var c=[7,12,18][g.shelterLevel];if(g.skillPts<c)return;g.skillPts-=c;g.shelterLevel++;refreshUpgrades();snd(520,.2,"triangle")}
+function nasaPanel(){return '<div class="card"><h2>🛰️ Centro de datos científicos NASA</h2><p>Consulta datos públicos actuales. Las mediciones de radiación de la ISS son referencias educativas y no equivalen directamente a la dosis en la superficie lunar o marciana.</p><button class="go" onclick="loadNASAData()">Consultar datos NASA</button><div id="nasaLive" class="mut">Aún no se han consultado datos en esta sesión.</div><p class="src">Fuentes: <a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/" target="_blank" rel="noopener">DONKI</a> · <a href="https://visualization.osdr.nasa.gov/radlab/gui/data-api/" target="_blank" rel="noopener">RadLab</a> · <a href="https://osdr.nasa.gov/bio/repo/" target="_blank" rel="noopener">OSDR</a> · <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">Mars Trek</a> · <a href="https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/" target="_blank" rel="noopener">CSA: producción de alimentos</a>.</p><p class="src">Aviso: NASA no respalda este juego ni entidades no gubernamentales; los enlaces externos se rigen por sus propias condiciones de uso.</p></div>'}
+function loadNASAData(){
+ var box=$("nasaLive");if(!box)return;box.textContent="Consultando DONKI, RadLab y OSDR…";
+ var end=new Date(),start=new Date(end.getTime()-7*86400000),fmt=function(d){return d.toISOString().slice(0,10)},base="https://api.nasa.gov/DONKI/",key="DEMO_KEY";
+ var radStart=fmt(new Date(end.getTime()-2*86400000))+"T00:00";
+ var urls=[
+  base+"FLR?startDate="+fmt(start)+"&endDate="+fmt(end)+"&api_key="+key,
+  base+"CME?startDate="+fmt(start)+"&endDate="+fmt(end)+"&api_key="+key,
+  "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&timestamp%3E="+encodeURIComponent(radStart)+"&fields+=timestamp,dose_equivalent_rate,absorbed_dose_rate&format=json",
+  "https://osdr.nasa.gov/osdr/data/search?term=spaceflight&size=3"
+ ];
+ Promise.all(urls.map(function(u){return fetch(u).then(function(r){if(!r.ok)throw Error("HTTP "+r.status);return r.json()}).catch(function(){return null})})).then(function(data){
+  var fl=data[0]||[],cm=data[1]||[],rad=data[2],osdr=data[3];
+  var html="<b>DONKI · últimos 7 días</b><br>Erupciones solares: "+fl.length+" · Eyecciones de masa coronal: "+cm.length;
+  if(fl.length){var f=fl[fl.length-1];html+="<br>FLR reciente: "+(f.classType||"clase no indicada")+" · "+(f.beginTime||"fecha no indicada")}
+  if(cm.length){var c=cm[cm.length-1];html+="<br>CME reciente: "+(c.startTime||"fecha no indicada")}
+  if(rad){var rows=Array.isArray(rad)?rad:(rad.data||rad.results||[]);html+="<br><b>RadLab · muestra ISS últimos 2 días:</b> "+rows.length+" registros";if(rows.length){var z=rows[rows.length-1];html+="<br>Última lectura: "+(z.timestamp||"fecha disponible")+(z.dose_equivalent_rate!=null?" · "+z.dose_equivalent_rate+" μSv/h":"")+(z.absorbed_dose_rate!=null?" · "+z.absorbed_dose_rate+" μGy/h":"")}}
+  else html+="<br>RadLab: consulta directa no disponible ahora; usa el enlace de la fuente.";
+  if(osdr){var n=osdr.total||osdr.hits&&osdr.hits.total&&osdr.hits.total.value||osdr.results&&osdr.results.length||"resultados disponibles";html+="<br><b>OSDR:</b> consulta de biología espacial realizada ("+n+")."}else html+="<br>OSDR: consulta no disponible ahora; usa su buscador.";
+  html+='<br><a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/" target="_blank" rel="noopener">DONKI</a> · <a href="https://visualization.osdr.nasa.gov/radlab/gui/data-api/" target="_blank" rel="noopener">RadLab</a> · <a href="https://osdr.nasa.gov/osdr/data/search?term=spaceflight" target="_blank" rel="noopener">OSDR: spaceflight</a>';
+  box.innerHTML=html;
+ });
+}
+function refreshUpgrades(){var ctl=$("ctl"),old=ctl.querySelector("#upgradeArea");if(old)old.innerHTML=skillTree()+storageUpgrade()+scienceExchange()+baseDevelopment();tp()}
+function upgradeSkill(k){if(!g||g.ph!=="sum")return;var lv=g.skills[k],cost=3+lv*3;if(lv>=3||g.skillPts<cost)return;g.skillPts-=cost;g.skills[k]++;refreshUpgrades();snd(720,.12,"triangle")}
+function upgradeStorage(){if(!g||g.ph!=="sum"||g.capacity>=8)return;var cost=[5,8,11,14,17][g.storageLevel]||0;if(g.skillPts<cost)return;g.skillPts-=cost;g.storageLevel++;g.capacity++;refreshUpgrades();snd(820,.16,"triangle")}
+function convertEnergyToScience(){if(!g||g.ph!=="sum"||g.e<15)return;g.e=cl(g.e-15);g.skillPts++;g.sci++;refreshUpgrades();hud();snd(620,.18,"sine")}
+function advanceDay(){if(!g||g.ph!=="sum"||g.terminal||g.day>=7)return;g.day++;newDay()}
+function endDay(){var s=g.st[g.day],lost=g.carry.length;g.ph="sum";g.carry=[];keys.l=keys.r=0;g.o=cl(g.o-12);g.e=cl(g.e-10);g.p=cl(g.p-3);g.h=cl(g.h-3);g.dose+=g.dz;var fm=[];g.pl.forEach(function(p){if(p.s==3){p.s=4;g.h=cl(g.h-4);fm.push("una planta se echó a perder por no cosecharla (−4 salud)")}else if(p.s>0&&p.s<3){if(g.mars)g.e=cl(g.e-4);if(p.w){p.s++;if(p.s==3)fm.push("una planta maduró: cosechala mañana o se echa a perder")}else fm.push("una planta sin riego no creció")}p.w=0});
+ var why=g.h<=0?"el equipo se enfermó demasiado (radiación, poca gravedad y cansancio)":g.o<=0?"se acabó el oxígeno":g.e<=0?"se acabó la energía":g.p<=0?"el escudo se rompió y la radiación ganó":"";g.terminal=!!why||g.day>=7;hud();
+ var h='<div class="day-transition"><div class="day-kicker">CICLO DE EXPLORACIÓN</div><div class="day-number">DÍA '+g.day+' COMPLETADO</div><div class="day-sub">Informe diario de la misión recibido · Base Lunar</div></div><div class="card"><h2>Fin del día '+g.day+'</h2><p>Llevaste a la base: '+(g.dep.length?g.dep.join(", "):"nada")+'.'+(lost?' <span class="bad">Perdiste '+lost+' cosas que seguían en la mochila.</span>':'')+'</p>'+(fm.length?'<p>🌱 '+fm.join("; ")+'.'+(g.mars?' En Marte las luces de las plantas gastaron energía.':'')+'</p>':'')+'<p class="mut">'+(g.lastSolar?("Los paneles solares generaron +"+g.lastSolar+" energía al iniciar el día. "):"")+'Cada día bajan el oxígeno (−12), la energía (−10), el escudo (−3) y la salud (−3, por la poca gravedad).</p></div>'+
+ (g.meteorDay?'<div class="card alert"><b>Lluvia de meteoritos:</b> Una lluvia de meteoritos cruzó la zona. '+(g.expo>0?'Estuviste expuesto '+g.expo.toFixed(1)+' s y recibiste impactos.':'Te refugiaste en la base y no sufriste daños.')+'</div>':'')+(s?'<div class="card alert"><b>Tormenta solar:</b> una '+s.n+' (real, '+s.f+') dañó el escudo (−'+10*s.s+') y la electrónica (−'+5*s.s+' de energía). '+(g.expo>0?'<span class="bad">Estuviste '+g.expo.toFixed(1)+' segundos afuera y te dolió.</span>':'Estabas a salvo dentro de la base.')+'</div>':'')+
+ '<div class="card"><b>Radiación de hoy: '+g.dz.toFixed(1)+' mSv</b> (total '+g.dose.toFixed(1)+')<p class="mut">Para comparar, aproximadamente: radiografía de tórax 0.1 mSv; un día en la Estación Espacial 0.5; un día en la Luna 1.4 (medido por Chang’e 4); en Marte 0.7 (medido por Curiosity). Con menos escudo recibes más. Cálculo simplificado.</p></div><div class="card"><b>🩺 Informe médico:</b> '+med()+'</div><div class="card"><b>Dato real de la NASA:</b><p>'+FACTS[(g.day-1+Math.floor(g.sci/10))%FACTS.length]+'</p></div>';
+ h+="<div id=\"upgradeArea\">"+skillTree()+storageUpgrade()+scienceExchange()+baseDevelopment()+"</div>"+nasaPanel();if(why)h+='<div class="card alert"><h2>Misión terminada</h2><p class="bad">En el día '+g.day+' '+why+'.</p><p>No es un fracaso: así aprenden los ingenieros. Prueba otra estrategia; las tormentas serán diferentes. Investigación: '+g.skillPts+' puntos.</p></div><button class="go" onclick="start()">Jugar de nuevo</button>';
+ else if(g.day>=7)h+='<div class="card alert"><h2>¡Misión cumplida!</h2><p>Sobreviviste 7 días con '+g.skillPts+' puntos de investigación. Los planificadores reales hacen este equilibrio todos los días.</p></div><button class="go" onclick="start()">Jugar de nuevo con otras tormentas</button>';
+ else h+='<button class="go" onclick="advanceDay()">Siguiente día (Enter)</button>';
+ snd(why?150:520,.4,"sine",.08);$("ctl").innerHTML=h+'<button class="go" onclick="mute=!mute;this.textContent=mute?\'🔇 Sonido\':\'🔊 Sonido\'">🔊 Sonido</button><p class="src">Fuentes: fechas y clases de llamaradas del archivo DONKI de la NASA (datos reales guardados en el juego, no en vivo); datos curiosos de OSDR y Artemis. Verifica los eventos en kauai.ccmc.gsfc.nasa.gov/DONKI.</p>';$("ctl").scrollIntoView({block:"nearest"})}
+function R(x,y,w,h,c,cam){ctx.fillStyle=c;ctx.fillRect(Math.round(x-cam),Math.round(y),w,h)}
+function icon(t,x,y,cam){
+ var X=Math.round(x-cam),Y=Math.round(y);
+ // Sombras y luces de borde para dar volumen de sprite 3D.
+ R(X-1+cam,Y+8,10,2,"rgba(0,0,0,.28)",cam);
+ if(t=="O"){
+  R(x-1,Y+1,8,8,"#173b5b",cam);R(x,Y,7,8,"#318ac1",cam);
+  R(x+1,Y+1,5,6,"#58c4f0",cam);R(x+2,Y+1,3,3,"#b9f0ff",cam);
+  R(x+1,Y+6,5,2,"#24628f",cam);R(x+5,Y+2,2,4,"#1b547e",cam);
+ }else if(t=="E"){
+  R(x,Y+1,8,8,"#81500e",cam);R(x+1,Y,6,8,"#e49b20",cam);
+  R(x+2,Y+1,4,6,"#ffd45c",cam);R(x+2,Y+1,2,2,"#fff0a4",cam);
+  R(x+5,Y+4,2,3,"#a75d16",cam);R(x+1,Y+7,6,1,"#75400e",cam);
+ }else if(t=="P"){
+  R(x,Y+1,9,8,"#164d38",cam);R(x+1,Y,7,8,"#2e9b60",cam);
+  R(x+2,Y+1,5,6,"#72d68b",cam);R(x+2,Y+2,2,3,"#c1f4a4",cam);
+  R(x+6,Y+4,2,3,"#176a4a",cam);R(x+2,Y+7,5,1,"#174d38",cam);
+ }else if(t=="H"){
+  R(x+2,Y+3,3,6,"#70421f",cam);R(x,Y+2,5,4,"#2c8b49",cam);
+  R(x+4,Y,5,5,"#3eae5d",cam);R(x+1,Y+1,3,2,"#9bea83",cam);
+  R(x+5,Y+1,3,2,"#b5ef91",cam);R(x+1,Y+5,5,2,"#1c663d",cam);
+ }else if(t=="A"){
+  R(x+1,Y,7,9,"#14527e",cam);R(x+2,Y,5,2,"#e1f8ff",cam);
+  R(x+1,Y+2,6,5,"#39a9e8",cam);R(x,Y+5,8,3,"#176fae",cam);
+  R(x+2,Y+3,3,2,"#c8f4ff",cam);R(x+5,Y+6,2,2,"#0c4d83",cam);
+ }else{
+  // Muestra mineral con facetas, vetas y reflejos.
+  R(x,Y+3,9,6,"#655346",cam);R(x+1,Y+2,7,5,"#b8a99a",cam);
+  R(x+2,Y,5,4,"#e7dfd3",cam);R(x+3,Y+1,3,2,"#fff8e9",cam);
+  R(x+1,Y+5,6,2,"#83776b",cam);R(x+6,Y+3,2,3,"#5c514a",cam);
+  R(x+2,Y+6,3,1,"#d0c4b5",cam);
+ }
+}
+function drawCosmos(cam,t,mr){
+ // Cielo retro de alta profundidad: gradiente, nebulosas y estrellas en capas parallax.
+ var base=ctx.createLinearGradient(0,0,0,176);
+ if(mr){base.addColorStop(0,"#080b20");base.addColorStop(.48,"#24102f");base.addColorStop(1,"#6a291e")}
+ else{base.addColorStop(0,"#05091e");base.addColorStop(.48,"#17133f");base.addColorStop(1,"#39205e")}
+ ctx.fillStyle=base;ctx.fillRect(0,0,240,176);
+ function cloud(x,y,rx,ry,color,alpha){ctx.save();ctx.globalAlpha=alpha;var gr=ctx.createRadialGradient(x,y,2,x,y,rx);gr.addColorStop(0,color);gr.addColorStop(.45,color);gr.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=gr;ctx.translate(x,y);ctx.scale(1,ry/rx);ctx.beginPath();ctx.arc(0,0,rx,0,Math.PI*2);ctx.fill();ctx.restore()}
+ var drift=cam*.055;
+ if(mr){cloud(48-drift%280,48,78,42,"#e34e58",.26);cloud(174-drift%260,63,88,46,"#8b43d4",.24);cloud(118-drift%300,22,66,34,"#f08a45",.16)}
+ else{cloud(38-drift%270,55,82,44,"#4b42db",.30);cloud(139-drift%280,44,94,48,"#b23cc5",.25);cloud(208-drift%260,76,72,38,"#2679cf",.22);cloud(104-drift%310,18,58,30,"#ed5d9a",.13)}
+ // Arco galáctico tenue y filamentos de polvo para dar más volumen al fondo.
+ ctx.save();ctx.globalAlpha=.16;ctx.strokeStyle=mr?"#e7a0a0":"#aebaff";ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(116,57,126,30,-.18,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.globalAlpha=.10;ctx.lineWidth=1;for(var arc=0;arc<7;arc++){ctx.beginPath();ctx.ellipse(116,57,104+arc*5,22+arc*2,-.18,Math.PI*1.08,Math.PI*1.92);ctx.stroke()}ctx.restore();
+ // Cúmulos lejanos: puntos muy pequeños con parallax lento.
+ for(var clus=0;clus<48;clus++){var cx=((clus*53+11-cam*.035)%260+260)%260-10,cy=(clus*31+7)%100;ctx.globalAlpha=.12+(clus%5)*.035;ctx.fillStyle=clus%4===0?"#ffc9e8":(clus%3===0?"#9bdcff":"#e7eaff");ctx.fillRect(cx,cy,1,1)}ctx.globalAlpha=1;
+ // Motas luminosas de polvo cósmico, desplazadas a distinta velocidad.
+ for(var n=0;n<34;n++){var xx=((n*73+19-cam*(.08+(n%3)*.045))%270+270)%270-15,yy=(n*47+11)%105;ctx.globalAlpha=.10+(n%4)*.035;ctx.fillStyle=n%3===0?"#ffb8e8":(n%3===1?"#8fdcff":"#c9c4ff");ctx.fillRect(xx,yy,2+(n%3),1)}ctx.globalAlpha=1;
+ // Tres planos de estrellas: pequeñas, brillantes y estrellas con destello.
+ ST.forEach(function(s,n){var x=((s.x-cam*(.12+(n%4)*.075))%250+250)%250-5,y=s.y*.92;var tw=.45+.45*Math.sin(t*2.2+n*1.7);ctx.globalAlpha=tw;ctx.fillStyle=n%7===0?"#aeeaff":(n%5===0?"#ffd6f4":"#ffffff");ctx.fillRect(x,y,n%9===0?2:1,n%9===0?2:1);if(n%13===0){ctx.globalAlpha=tw*.5;ctx.fillRect(x-2,y,5,1);ctx.fillRect(x,y-2,1,5)}});ctx.globalAlpha=1;
+ // Planeta lejano con halo y anillos; la posición se mueve lentamente con la cámara.
+ var px=184-cam*.025,py=31;var halo=ctx.createRadialGradient(px,py,5,px,py,35);halo.addColorStop(0,mr?"rgba(255,173,112,.30)":"rgba(117,145,255,.28)");halo.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=halo;ctx.beginPath();ctx.arc(px,py,35,0,Math.PI*2);ctx.fill();
+ ctx.save();ctx.translate(px,py);ctx.rotate(-.22);ctx.strokeStyle=mr?"rgba(255,192,143,.55)":"rgba(178,190,255,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,24,7,0,0,Math.PI*2);ctx.stroke();var pg=ctx.createLinearGradient(-12,-12,12,12);pg.addColorStop(0,mr?"#f6b16c":"#a8b9ff");pg.addColorStop(.55,mr?"#a94d5b":"#6555bb");pg.addColorStop(1,"#17152f");ctx.fillStyle=pg;ctx.beginPath();ctx.arc(0,0,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle=mr?"rgba(255,213,165,.45)":"rgba(216,206,255,.4)";ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,0,24,7,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
+ // Estelas ocasionales para dar sensación de movimiento espacial.
+ var sx=((t*31)%300)-35,sy=18+((Math.floor(t/3)*29)%55);ctx.globalAlpha=.5;ctx.strokeStyle="#d7eaff";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx-9,sy+3);ctx.stroke();ctx.globalAlpha=1;
+}
+function draw(){var cam=g.px-120,mr=g.mars,i,t=now0()/1000;ctx.imageSmoothingEnabled=true;
+ drawCosmos(cam,t,mr);
+ var pc=170-cam*.05;for(i=-18;i<=18;i++){var w=Math.floor(Math.sqrt(324-i*i));ctx.fillStyle=mr?"#d9a06a":"#3b6fb0";ctx.fillRect(pc-w,36+i,w*2,1)}
+ ctx.fillStyle=mr?"#e6c08c":"#6fa0dc";ctx.fillRect(pc-8,28,6,3);ctx.fillRect(pc+3,40,5,3);
+ for(i=0;i<240;i+=2){var wx=i+cam*.5,hh=17+Math.sin(wx/37)*8+Math.sin(wx/13)*3;ctx.fillStyle=mr?"#51251d":"#343b49";ctx.fillRect(i,GY-hh,2,hh)}
+ for(i=0;i<240;i+=3){var wx2=i+cam*.72,hh2=9+Math.sin(wx2/23)*5+Math.sin(wx2/9)*2;ctx.fillStyle=mr?"#7c3827":"#525b6a";ctx.fillRect(i,GY-hh2,3,hh2)}
+ var soil=ctx.createLinearGradient(0,GY,0,176);
+ soil.addColorStop(0,mr?"#d99a72":"#aeb4c1");soil.addColorStop(.16,mr?"#b96b4a":"#858d9d");soil.addColorStop(.55,mr?"#88432f":"#626a7b");soil.addColorStop(1,mr?"#45231e":"#343b4a");
+ ctx.fillStyle=soil;ctx.fillRect(0,GY,240,36);
+ ctx.fillStyle=mr?"#edb08a":"#d5d9e0";ctx.fillRect(0,GY,240,1);
+ ctx.fillStyle=mr?"#783522":"#454c5b";ctx.fillRect(0,GY+13,240,23);
+ // Capas de regolito lunar: polvo fino, placas erosionadas y pequeñas crestas.
+ for(var layer=0;layer<5;layer++){ctx.globalAlpha=mr?.13:.16;ctx.fillStyle=layer%2?(mr?"#f6c09a":"#e1e4e9"):(mr?"#38201d":"#202938");for(var tx=-20;tx<260;tx+=29){var xx=((tx-Math.floor(cam*.35))%280+280)%280-20;ctx.beginPath();ctx.moveTo(xx,GY+3+layer*6);ctx.lineTo(xx+16,GY+2+layer*6);ctx.lineTo(xx+27,GY+4+layer*6);ctx.lineTo(xx+8,GY+7+layer*6);ctx.closePath();ctx.fill()}}ctx.globalAlpha=1;
+ // Polvo gris ceniza, piedrecillas angulosas y microcráteres; Marte conserva su tono rojizo.
+ for(var d=0;d<82;d++){var gx=((d*47+Math.floor(cam*.7))%260+260)%260-10,gy=GY+3+(d*17)%31;ctx.globalAlpha=.18+(d%4)*.07;ctx.fillStyle=mr?(d%3===0?"#f0b18c":(d%3===1?"#49271f":"#bd7658")):(d%3===0?"#e1e4e9":(d%3===1?"#303846":"#a0a7b3"));ctx.fillRect(gx,gy,1+(d%3),1+(d%2));if(d%8===0){ctx.strokeStyle=mr?"rgba(255,220,190,.2)":"rgba(235,240,248,.25)";ctx.lineWidth=.5;ctx.beginPath();ctx.arc(gx,gy,2+d%3,0,Math.PI);ctx.stroke()}}ctx.globalAlpha=1;
+ // Rocas lunares sueltas con caras iluminadas y sombra de contacto.
+ for(var rk=0;rk<13;rk++){var rx=((rk*67+Math.floor(cam*.55))%270+270)%270-12,ry=GY+5+(rk*11)%24;ctx.fillStyle=mr?"#70402f":"#4c5361";ctx.beginPath();ctx.moveTo(rx,ry+2);ctx.lineTo(rx+2,ry-1-(rk%3));ctx.lineTo(rx+6,ry-2);ctx.lineTo(rx+9,ry+1);ctx.lineTo(rx+7,ry+3);ctx.closePath();ctx.fill();ctx.fillStyle=mr?"#e1a17e":"#cbd0d9";ctx.fillRect(rx+2,ry-1,3,1);ctx.fillRect(rx+6,ry,2,1)}
+ CR.forEach(function(c){R(c.x,GY+6,c.w,3,mr?"#7a2e1a":"#7a3418",cam)});
+ g.ob.forEach(function(o){
+ if(o.c){
+  // Cráter: borde elevado, pared interior sombreada y fondo con polvo.
+  var cx=o.x-cam,rx=o.w/2;
+  ctx.save();ctx.globalAlpha=.95;
+  ctx.fillStyle=mr?"#6b2d20":"#5b4565";ctx.beginPath();ctx.ellipse(cx,GY+1,rx,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=mr?"#3b1713":"#26172f";ctx.beginPath();ctx.ellipse(cx,GY+1,Math.max(3,rx-3),3.2,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=mr?"#d07a51":"#9b79a5";ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(cx,GY-1,rx-1,4,0,Math.PI,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle=mr?"rgba(255,190,130,.5)":"rgba(214,190,255,.45)";ctx.lineWidth=.7;ctx.beginPath();ctx.ellipse(cx-1,GY-2,rx*.65,2,0,Math.PI,Math.PI*2);ctx.stroke();
+  R(o.x-2,GY,4,1,mr?"#b96745":"#a68ab0",cam);ctx.restore();
+ }else{
+  // Asteroide irregular, con silueta facetada, sombras, grietas y reflejos.
+  var ax=o.x-cam,ay=GY-7,sz=o.w||12;
+  ctx.save();ctx.translate(ax,ay);
+  ctx.fillStyle="rgba(0,0,0,.32)";ctx.beginPath();ctx.ellipse(1,8,sz*.62,2.3,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(-sz*.55,2);ctx.lineTo(-sz*.48,-3);ctx.lineTo(-sz*.18,-7);ctx.lineTo(sz*.16,-8);ctx.lineTo(sz*.48,-4);ctx.lineTo(sz*.58,1);ctx.lineTo(sz*.25,5);ctx.lineTo(-sz*.28,5);ctx.closePath();
+  var rock=ctx.createLinearGradient(-sz*.4,-7,sz*.45,6);
+  rock.addColorStop(0,mr?"#d18a67":"#aaa0bd");rock.addColorStop(.38,mr?"#8e5543":"#756d89");rock.addColorStop(1,mr?"#42241f":"#393247");
+  ctx.fillStyle=rock;ctx.fill();ctx.strokeStyle=mr?"#45231d":"#30293e";ctx.lineWidth=1;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-sz*.18,-5);ctx.lineTo(sz*.02,-2);ctx.lineTo(-sz*.08,2);ctx.lineTo(-sz*.35,1);ctx.closePath();ctx.fillStyle=mr?"#e1a17c":"#d0c7dc";ctx.fill();
+  ctx.beginPath();ctx.moveTo(sz*.05,-6);ctx.lineTo(sz*.4,-3);ctx.lineTo(sz*.48,1);ctx.lineTo(sz*.12,3);ctx.lineTo(-sz*.02,0);ctx.closePath();ctx.fillStyle=mr?"#754132":"#51495f";ctx.fill();
+  ctx.strokeStyle=mr?"rgba(255,207,160,.55)":"rgba(239,230,255,.55)";ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(-sz*.3,-2);ctx.lineTo(-sz*.1,-4);ctx.lineTo(sz*.05,-2);ctx.stroke();
+  ctx.fillStyle=mr?"#e6a17a":"#e0d8ec";ctx.fillRect(-sz*.24,-3,2,1);ctx.fillRect(sz*.16,1,1,1);
+  ctx.restore();
+ }
+});
+
+ R(18-g.shelterLevel*3,GY-22,64+g.shelterLevel*6,22,"#8d8fa8",cam);R(24-g.shelterLevel*3,GY-30,52+g.shelterLevel*6,8,"#a8aac2",cam);R(46,GY-14,10,14,"#4aa3e8",cam);
+ if(g.shelterLevel>0){for(var sm=0;sm<g.shelterLevel;sm++){R(18-sm*3,GY-26-sm*2,5,5,"#d4d9e8",cam);R(78+sm*3,GY-26-sm*2,5,5,"#d4d9e8",cam)}}
+ if(g.solarLevel>0){for(var sp=0;sp<g.solarLevel;sp++){R(28+sp*11,GY-38,9,5,"#245b91",cam);R(29+sp*11,GY-37,7,3,"#62c7e8",cam);R(32+sp*11,GY-33,1,3,"#b7c3d8",cam)}}R(22,GY-18,6,4,"#ffe9a0",cam);R(68,GY-18,6,4,"#ffe9a0",cam);R(58,GY-38,2,8,"#bbb",cam);R(57,GY-40,4,2,"#ff6b5a",cam);
+ ctx.globalAlpha=.25+g.p/150;for(var a=0;a<=3.15;a+=.07)R(60+42*Math.cos(a),GY-42*Math.sin(a),2,2,"#58d68d",cam);ctx.globalAlpha=1;
+ g.pl.forEach(function(p){
+  // Maceta/suelo con textura y volumen.
+  R(p.x-7,GY-3,14,3,"#302016",cam);R(p.x-6,GY-2,12,2,"#8b5734",cam);R(p.x-5,GY-1,10,1,"#c18a55",cam);
+  if(p.s>0){R(p.x-1,GY-5,2,4,"#276b3b",cam);R(p.x-2,GY-8,2,4,"#3e9b50",cam);R(p.x+1,GY-10,2,5,"#48ad59",cam);R(p.x-5,GY-8,5,2,"#328e49",cam);R(p.x-6,GY-9,3,2,"#65c96c",cam);R(p.x+2,GY-7,5,2,"#328e49",cam);R(p.x+4,GY-8,3,2,"#70d477",cam);R(p.x-4,GY-7,2,1,"#a2e68b",cam);R(p.x+3,GY-6,2,1,"#a2e68b",cam)}
+  if(p.s>=2){R(p.x-7,GY-12,4,2,"#398e4c",cam);R(p.x-8,GY-13,3,2,"#70d477",cam);R(p.x+4,GY-13,4,2,"#398e4c",cam);R(p.x+6,GY-14,3,2,"#70d477",cam)}
+  if(p.s==3){R(p.x-3,GY-16,5,5,"#c93442",cam);R(p.x-2,GY-17,4,2,"#ed5960",cam);R(p.x-2,GY-14,2,2,"#ffd17a",cam);R(p.x+3,GY-14,4,4,"#b82c3b",cam);R(p.x+4,GY-15,3,2,"#f36a69",cam);R(p.x+4,GY-13,1,1,"#ffe0a0",cam)}
+  if(p.s==4){R(p.x-5,GY-6,10,3,"#76502e",cam);R(p.x-4,GY-5,8,1,"#b88751",cam)}
+  if(p.s>0&&p.s<3){R(p.x-7,GY-15,3,3,p.w?"#7fd4ff":"#555",cam);if(p.w){R(p.x-6,GY-14,1,1,"#fff",cam);R(p.x-8,GY-11,1,2,"#7fd4ff",cam)}}
+ });
+ g.items.forEach(function(it){if(!it.ok)return;var by=GY-9+Math.sin(t*3+it.x)*1.5;icon(it.t,it.x,by,cam);ctx.fillStyle="#fff";ctx.font="7px monospace";ctx.fillText(it.v,it.x-cam-1,by-3)});
+ var px=g.px,f=g.f,bob=(Math.floor(g.wk)%2),baseY=GY-g.py-24,flip=function(dx,w){return px+(f>0?dx:-dx-w)};
+  // Traje EVA realista inspirado en trajes extravehiculares modernos.
+  R(px-10,GY-1,20,2,"rgba(0,0,0,.38)",cam);
+  // Botas presurizadas y piernas segmentadas.
+  R(flip(-7,5),baseY+17,5,6+bob,"#c9d2dc",cam);R(flip(-8,6),baseY+22+bob,7,3,"#596675",cam);
+  R(flip(-7,4),baseY+17,3,3,"#f4f6f7",cam);R(flip(-7,5),baseY+20,5,1,"#8d9aa8",cam);
+  R(flip(2,5),baseY+17,5,6-bob,"#c9d2dc",cam);R(flip(1,6),baseY+22-bob,7,3,"#596675",cam);
+  R(flip(3,3),baseY+17,2,3,"#f4f6f7",cam);R(flip(2,5),baseY+20,5,1,"#8d9aa8",cam);
+  R(flip(-7,5),baseY+15,5,3,"#e9edf0",cam);R(flip(2,5),baseY+15,5,3,"#e9edf0",cam);
+  // Mochila de soporte vital PLSS, depósitos y conectores.
+  R(flip(-12,7),baseY+6,7,14,"#687887",cam);R(flip(-11,5),baseY+7,5,11,"#e2e7e9",cam);
+  R(flip(-11,3),baseY+8,3,4,"#aab6bf",cam);R(flip(-11,3),baseY+14,3,3,"#7b8994",cam);
+  R(flip(-12,2),baseY+8,2,3,"#d98236",cam);R(flip(-12,2),baseY+17,2,2,"#d98236",cam);
+  R(flip(-8,2),baseY+11,2,6,"#b6c1c8",cam);
+  // Brazos con hombreras, fuelles y guantes gruesos.
+  R(flip(-10,5),baseY+8,5,5,"#f0f2f2",cam);R(flip(-10,4),baseY+12,4,5,"#cbd3d8",cam);
+  R(flip(-11,4),baseY+16,5,3,"#e6ebed",cam);R(flip(-10,2),baseY+13,2,3,"#8e9aa4",cam);
+  R(flip(6,5),baseY+8,5,5,"#f0f2f2",cam);R(flip(7,4),baseY+12,4,5,"#cbd3d8",cam);
+  R(flip(7,4),baseY+16,5,3,"#e6ebed",cam);R(flip(8,2),baseY+13,2,3,"#8e9aa4",cam);
+  R(flip(-11,3),baseY+17,4,2,"#596675",cam);R(flip(8,3),baseY+17,4,2,"#596675",cam);
+  // Torso blanco multicapa con bandas y controles del pecho.
+  R(flip(-7,14),baseY+7,14,11,"#aeb9c2",cam);R(flip(-6,12),baseY+7,12,10,"#f0f2f1",cam);
+  R(flip(-5,10),baseY+9,10,6,"#dce2e4",cam);R(flip(-6,2),baseY+8,2,8,"#fff",cam);
+  R(flip(4,2),baseY+8,2,8,"#aeb9c2",cam);R(flip(-2,5),baseY+10,5,4,"#657583",cam);
+  R(flip(-1,3),baseY+10,3,2,"#b8c7cf",cam);R(flip(-1,2),baseY+12,2,1,"#f4f6f7",cam);
+  R(flip(-5,2),baseY+14,2,2,"#d98236",cam);R(flip(4,2),baseY+14,2,2,"#d98236",cam);
+  // Parches de misión y bandera estilizada, sin logotipo oficial.
+  R(flip(-6,3),baseY+9,3,3,"#244c78",cam);R(flip(-6,2),baseY+10,2,1,"#fff",cam);
+  R(flip(4,3),baseY+9,3,3,"#a33b32",cam);R(flip(4,2),baseY+10,2,1,"#fff",cam);
+  // Cuello rígido y casco con visor dorado multicapa.
+  R(flip(-3,6),baseY+5,6,3,"#8b969e",cam);R(flip(-7,14),baseY-2,14,10,"#7d8992",cam);
+  R(flip(-6,12),baseY-1,12,8,"#f1f3f2",cam);R(flip(-5,10),baseY,10,6,"#8a6a35",cam);
+  R(flip(-4,8),baseY+1,8,4,"#c69a4b",cam);R(flip(-3,5),baseY+1,5,2,"#f1d58b",cam);
+  R(flip(2,3),baseY+3,3,2,"#fff0bd",cam);R(flip(-4,3),baseY,3,1,"#fff",cam);
+  R(flip(-7,14),baseY+5,14,2,"#aeb8be",cam);R(flip(-7,2),baseY+1,2,4,"#fff",cam);
+  // Aro de casco y detalles naranjas de alta visibilidad.
+  R(flip(5,2),baseY-4,2,3,"#d98236",cam);R(flip(7,3),baseY+10,3,3,"#d98236",cam);
+  R(flip(8,1),baseY+11,1,1,"#fff0bd",cam);
+g.carry.forEach(function(it,k){icon(it.t,px-12+k*9,GY-36+Math.sin(t*4+k)*1.5,cam)});
+ pt.forEach(function(q){R(q.x,q.y,1,5,"#ff6b5a",cam)});g.mets.forEach(function(a){ctx.strokeStyle="#ffdca0";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x-cam,a.y);ctx.lineTo(a.x-cam-7,a.y-9);ctx.stroke();R(a.x-1,a.y-1,3,3,"#fff1c2",cam)});if(g.ph=="storm"){ctx.fillStyle="rgba(255,50,30,"+(.12+.06*Math.sin(t*10))+")";ctx.fillRect(0,0,240,176)}if(g.ph=="meteor"){ctx.fillStyle="rgba(255,155,55,.12)";ctx.fillRect(0,0,240,176)}
+ pops.forEach(function(p){ctx.fillStyle=p.c;ctx.font="8px monospace";ctx.fillText(p.t,p.x-cam-8,p.y)});
+ if(g.cinema>0){
+  var ct=g.cinemaTotal-g.cinema,landStart=4.05,landEnd=5.05,exitStart=6.65,fade=Math.max(0,Math.min(1,(g.cinema)/.8));
+  var descend=Math.max(0,Math.min(1,(ct-1.15)/2.95)),touch=Math.max(0,Math.min(1,(ct-landStart)/(landEnd-landStart))),exit=Math.max(0,Math.min(1,(ct-exitStart)/2.4));
+  var groundY=139,rx=120,ry=-48+descend*161-(touch>0?Math.sin(touch*Math.PI)*2.8:0),dust=touch>0?Math.min(1,(ct-landStart)/.35):0;
+  ctx.save();
+  // Cinematic establishing shot, deep-space sky and a low lunar/Martian horizon.
+  ctx.fillStyle="rgba(2,5,16,.94)";ctx.fillRect(0,0,240,176);
+  var sky=ctx.createLinearGradient(0,0,0,176);sky.addColorStop(0,mr?"#160d1b":"#07142b");sky.addColorStop(.72,mr?"#42251f":"#263b59");sky.addColorStop(1,mr?"#9a5740":"#777f91");ctx.fillStyle=sky;ctx.fillRect(0,0,240,176);
+  for(var si=0;si<92;si++){var sx=(si*83+17)%240,sy=(si*47+9)%105;ctx.globalAlpha=.35+.55*(.5+.5*Math.sin(ct*2+si));ctx.fillStyle=si%11===0?"#b9e7ff":"#fff";ctx.fillRect(sx,sy,si%9===0?2:1,si%9===0?2:1)}ctx.globalAlpha=1;
+  // Distant planet and rugged horizon.
+  ctx.fillStyle=mr?"#bd7352":"#7395c4";ctx.beginPath();ctx.arc(194,35,20,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(20,25,43,.25)";ctx.beginPath();ctx.arc(202,29,17,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=mr?"#4d2924":"#3b465a";ctx.beginPath();ctx.moveTo(0,117);for(var hx=0;hx<=240;hx+=8)ctx.lineTo(hx,112+Math.sin(hx*.055)*8+Math.sin(hx*.13)*3);ctx.lineTo(240,176);ctx.lineTo(0,176);ctx.closePath();ctx.fill();
+  var terrain=ctx.createLinearGradient(0,130,0,176);terrain.addColorStop(0,mr?"#bd795c":"#9ba3b1");terrain.addColorStop(1,mr?"#6c382d":"#4d5667");ctx.fillStyle=terrain;ctx.fillRect(0,groundY,240,36);
+  for(var cr=0;cr<18;cr++){var cx=(cr*37+13)%240,cy=145+(cr%4)*6;ctx.globalAlpha=.15;ctx.fillStyle="#202535";ctx.beginPath();ctx.ellipse(cx,cy,2+(cr%3)*2,1+(cr%2),0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
+  // Descent plume with flicker, widening toward touchdown.
+  if(ct>1.15&&ct<5.35){var plume=(ct<landStart?1:.25)*(1+Math.sin(ct*24)*.12);ctx.save();ctx.globalAlpha=plume;ctx.fillStyle="#ffb34f";ctx.beginPath();ctx.moveTo(rx-5,ry+27);ctx.lineTo(rx,ry+52+Math.sin(ct*17)*3);ctx.lineTo(rx+5,ry+27);ctx.closePath();ctx.fill();ctx.fillStyle="#fff0b0";ctx.beginPath();ctx.moveTo(rx-2,ry+27);ctx.lineTo(rx,ry+43);ctx.lineTo(rx+2,ry+27);ctx.closePath();ctx.fill();ctx.restore()}
+  // Landing vehicle: crew capsule, heat shield, windows, deployed legs and footpads.
+  ctx.save();ctx.translate(rx,ry);
+  ctx.fillStyle="#343f50";ctx.fillRect(-11,13,22,14);ctx.fillStyle="#d9e0e7";ctx.beginPath();ctx.moveTo(-9,12);ctx.lineTo(-7,-10);ctx.lineTo(-3,-20);ctx.lineTo(3,-20);ctx.lineTo(7,-10);ctx.lineTo(9,12);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#f5f6f3";ctx.fillRect(-7,-5,14,16);ctx.fillStyle="#9aa9b8";ctx.fillRect(-9,9,18,5);ctx.fillStyle="#e38a43";ctx.fillRect(-8,1,16,3);
+  ctx.fillStyle="#4c9db9";ctx.beginPath();ctx.ellipse(0,-9,4,5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b9eaff";ctx.fillRect(-2,-12,2,2);
+  ctx.fillStyle="#7b8998";ctx.fillRect(-12,13,24,3);
+  // Landing struts spread progressively as the craft settles.
+  var leg=touch;ctx.strokeStyle="#c6d0d8";ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(-7,12);ctx.lineTo(-12-leg*4,23+leg*2);ctx.moveTo(7,12);ctx.lineTo(12+leg*4,23+leg*2);ctx.stroke();ctx.fillStyle="#e0e5e8";ctx.fillRect(-15-leg*4,24+leg*2,7,2);ctx.fillRect(8+leg*4,24+leg*2,7,2);
+  ctx.restore();
+  // Dust rolls outward on touchdown and slowly settles.
+  if(dust>0){for(var di=0;di<16;di++){var spread=(ct-landStart)*18+(di%8)*3,side=di%2?1:-1,dx=rx+side*spread,dy=groundY-2-(di%5)*2+Math.sin(ct*7+di)*2;ctx.globalAlpha=Math.max(0,(1-(ct-landStart)/2.2))*.48;ctx.fillStyle=mr?"#e5a17d":"#d9dce2";ctx.beginPath();ctx.ellipse(dx,dy,2+(di%4),1+(di%3),0,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
+  // Ramp opens and the astronaut carefully walks down to the surface.
+  if(ct>6.05){var ramp=Math.min(1,(ct-6.05)/.65);ctx.strokeStyle="#d9e0e6";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(rx+8,ry+12);ctx.lineTo(rx+17,ry+14+ramp*11);ctx.stroke();
+   if(ct>exitStart){var ax=rx+10+exit*17,ay=groundY-20-exit*2;ctx.save();ctx.translate(ax,ay);ctx.fillStyle="#687887";ctx.fillRect(-6,7,4,9);ctx.fillStyle="#e8edf0";ctx.fillRect(-4,2,9,12);ctx.fillStyle="#c5cfd6";ctx.fillRect(-5,11,5,5);ctx.fillRect(2,11,5,5);ctx.fillStyle="#f4f5f2";ctx.fillRect(-5,-5,11,9);ctx.fillStyle="#b58a43";ctx.fillRect(-4,-12,10,8);ctx.fillStyle="#e7c879";ctx.fillRect(-3,-11,7,5);ctx.fillStyle="#d98236";ctx.fillRect(-7,1,3,5);ctx.fillRect(6,1,3,5);ctx.restore()}}
+  // Filmic letterbox, title cards and phase captions.
+  ctx.fillStyle="rgba(0,0,0,.78)";ctx.fillRect(0,0,240,12);ctx.fillRect(0,164,240,12);
+  ctx.fillStyle="#e9f3ff";ctx.textAlign="center";ctx.font="bold 8px monospace";ctx.fillText(mr?"MISIÓN MARTE":"MISIÓN LUNAR",120,8);
+  ctx.font="6px monospace";ctx.fillStyle="#c8d8e8";var caption=ct<1.15?"DESCENSO ORBITAL":ct<landStart?"APROXIMACIÓN FINAL":ct<5.65?"CONTACTO CON LA SUPERFICIE":ct<6.65?"MOTORES APAGADOS · SISTEMAS ESTABLES":ct<9.05?"EL ASTRONAUTA DESCIENDE":"MISIÓN INICIADA";ctx.fillText(caption,120,171);
+  if(ct>9.2){ctx.globalAlpha=Math.min(1,(ct-9.2)/.9);ctx.fillStyle="#fff";ctx.font="bold 7px monospace";ctx.fillText("DÍA 1 · COMIENZA LA EXPLORACIÓN",120,150);ctx.globalAlpha=1}
+  ctx.globalAlpha=1;ctx.restore();
+ }
+ R(4+cam,4,232,5,"#000",cam);var fr=g.ph=="play"?Math.max(0,g.t/DAY):0;R(5+cam,5,230*fr,3,g.t<8?"#ff6b5a":"#58d68d",cam);
+ for(i=0;i<g.capacity;i++){R(4+i*12+cam,12,11,11,"rgba(0,0,0,.5)",cam);if(g.carry[i])icon(g.carry[i].t,6+i*12,14,0)}
+ ctx.fillStyle="#fff";ctx.font="8px monospace";if(g.ph=="storm")ctx.fillText("¡TORMENTA! ¡A LA BASE!",50,30);else if(g.ph=="meteor")ctx.fillText("☄️ ¡METEORITOS! ¡REFÚGIATE!",45,30);else if((g.px>100||g.px<18)&&g.t<8&&g.ph=="play")ctx.fillText("¡Vuelve a la base!",70,30);else if(g.px>=18&&g.px<=100)ctx.fillText("BASE: a salvo",4,172)}
+window.addEventListener("keydown",function(e){
+ var k=e.key.toLowerCase();
+ if(k==="arrowleft"||k==="a")keys.l=1;
+ if(k==="arrowright"||k==="d")keys.r=1;
+ if(e.code==="Space"||k==="arrowup"){e.preventDefault();if(!e.repeat)jump()}
+ if(k==="q"){e.preventDefault();if(!e.repeat)act()}
+ if(k==="g"){e.preventDefault();if(!e.repeat&&g)start(g.mars)}
+ if(k==="enter"){e.preventDefault();if(!e.repeat)advanceDay()}
+});
+window.addEventListener("keyup",function(e){
+ var k=e.key.toLowerCase();
+ if(k==="arrowleft"||k==="a")keys.l=0;
+ if(k==="arrowright"||k==="d")keys.r=0;
+});
+window.addEventListener("blur",function(){keys.l=0;keys.r=0});
+
+// Música ambiental original generada con Web Audio (sin archivos externos).
+var musicOn=false,musicTimer=null,musicNodes=[],musicStep=0;
+var musicChords=[[164.81,207.65,246.94],[146.83,185,220],[174.61,220,261.63],[130.81,164.81,196]];
+function musicTone(freq,start,duration,volume,type){
+ if(!AC)return;var osc=AC.createOscillator(),gain=AC.createGain(),filter=AC.createBiquadFilter();
+ osc.type=type||"triangle";osc.frequency.value=freq;filter.type="lowpass";filter.frequency.value=1100;
+ var attack=Math.min(.035,duration*.15),release=Math.min(.12,duration*.25);
+ gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(volume,start+attack);
+ gain.gain.setValueAtTime(volume,start+duration-release);gain.gain.linearRampToValueAtTime(.0001,start+duration);
+ osc.connect(filter);filter.connect(gain);gain.connect(AC.destination);osc.start(start);osc.stop(start+duration+.05);
+ musicNodes.push(osc);
+}
+function musicTick(){
+ if(!musicOn||!AC)return;
+ var now=AC.currentTime,step=musicStep%16,bar=Math.floor(musicStep/16)%musicChords.length;
+ var ch=musicChords[bar];
+ // OST original: pop humana retro, juguetona y repetitiva, con bajo y tecladito.
+ if(step===0||step===8)ch.forEach(function(f,i){musicTone(f,now+.02,1.25,.012/(i+1),"sine")});
+ var bass=[82.41,73.42,87.31,65.41][bar];
+ if(step%4===0)musicTone(bass,now,.28,.055,"triangle");
+ var melody=[[0,2,4,2,1,3,2,4,0,2,5,4,2,1,3,1],[2,4,5,4,2,1,3,2,4,5,4,2,1,2,0,1],[4,2,1,2,5,4,2,1,3,2,0,2,4,2,1,0],[0,1,3,2,4,2,1,3,5,4,2,1,2,0,1,0]];
+ var scale=[261.63,293.66,329.63,392,440,493.88,523.25];
+ musicTone(scale[melody[bar][step]],now+.015,.32,.045,"triangle");
+ if(step%4===2)musicTone(scale[melody[bar][step]+1]||scale[2],now+.04,.22,.022,"sine");
+ musicStep++;musicTimer=setTimeout(musicTick,360);
+}
+function toggleMusic(){
+ try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}catch(e){return}
+ musicOn=!musicOn;
+ var labels=document.querySelectorAll("#musicLabel");labels.forEach(function(el){el.textContent=musicOn?"ON":"OFF"});
+ if(musicOn){musicStep=0;musicTick()}else{clearTimeout(musicTimer);musicNodes.forEach(function(n){try{n.stop()}catch(e){}});musicNodes=[]}
+}
+
+intro();
+</script></body></html>
